@@ -114,12 +114,19 @@ abstract class Hook extends RepositoryAware
     {
         $hookConfigs = $this->getHookConfigsToHandle();
 
-        $this->io->write('<comment>' . $this->hook . ':</comment> ');
+        /** @var IO\Base $io */
+        $io = $this->io;
+
+        $io->write('<comment>' . $this->hook . ':</comment> ');
+
+        if ($io->getOption('disable-plugins')) {
+            $io->write('<fg=magenta>Running with plugins disabled</>');
+        }
 
         // if the hook and all triggered virtual hooks
         // are NOT enabled in the captainhook configuration skip the execution
         if (!$this->isAnyConfigEnabled($hookConfigs)) {
-            $this->io->write(' - hook is disabled');
+            $io->write(' - hook is disabled');
             return;
         }
 
@@ -128,7 +135,7 @@ abstract class Hook extends RepositoryAware
         $actions = $this->getActionsToExecute($hookConfigs);
         // are any actions configured
         if (count($actions) === 0) {
-            $this->io->write(' - no actions to execute', true);
+            $io->write(' - no actions to execute', true);
         } else {
             $this->executeActions($actions);
         }
@@ -151,6 +158,16 @@ abstract class Hook extends RepositoryAware
         }
 
         return $configs;
+    }
+
+    /**
+     * Returns true if this hook or any applicable virtual hooks are enabled
+     *
+     * @return bool
+     */
+    public function isEnabled(): bool
+    {
+        return $this->isAnyConfigEnabled($this->getHookConfigsToHandle());
     }
 
     /**
@@ -192,6 +209,16 @@ abstract class Hook extends RepositoryAware
         }
 
         return $this->skipActions;
+    }
+
+    /**
+     * Returns all actions configured for this hook or applicable virtual hooks
+     *
+     * @return \CaptainHook\App\Config\Action[]
+     */
+    public function getActions(): array
+    {
+        return $this->getActionsToExecute($this->getHookConfigsToHandle());
     }
 
     /**
@@ -283,18 +310,9 @@ abstract class Hook extends RepositoryAware
      */
     private function handleAction(Config\Action $action): void
     {
-        if ($this->shouldSkipActions()) {
-            $this->io->write(
-                $this->formatActionOutput($action->getAction()) . ': <comment>deactivated</comment>',
-                true
-            );
-            return;
-        }
-
         $this->io->write(' - <fg=blue>' . $this->formatActionOutput($action->getAction()) . '</> : ', false);
 
-        if (!$this->doConditionsApply($action->getConditions())) {
-            $this->io->write('<comment>skipped</comment>', true);
+        if ($this->checkSkipAction($action)) {
             return;
         }
 
@@ -303,6 +321,7 @@ abstract class Hook extends RepositoryAware
         // The beforeAction() method may indicate that the current and all
         // remaining actions should be skipped. If so, return here.
         if ($this->shouldSkipActions()) {
+            $this->io->write('<comment>deactivated</comment>', true);
             return;
         }
 
@@ -361,6 +380,55 @@ abstract class Hook extends RepositoryAware
     }
 
     /**
+     * Check if the action should be skipped
+     *
+     * @param Config\Action $action
+     * @return bool
+     */
+    private function checkSkipAction(Config\Action $action): bool
+    {
+        if (
+            $this->shouldSkipActions()
+            || $this->cliSkipAction($action)
+            || !$this->doConditionsApply($action->getConditions())
+        ) {
+            $this->io->write('<comment>skipped</comment>', true);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the CLI `action` options indicates the action should be skipped
+     *
+     * @param Config\Action $action
+     * @return bool
+     */
+    private function cliSkipAction(Config\Action $action): bool
+    {
+        /** @var IO\Base $io */
+        $io = $this->io;
+
+        /** @var string[] $actionsToRun */
+        $actionsToRun = $io->getOption('action', []);
+
+        if (empty($actionsToRun)) {
+            // No actions specified on CLI; run all actions.
+            return false;
+        }
+
+        if (in_array($action->getAction(), $actionsToRun)) {
+            // Action specified on CLI; do not skip.
+            return false;
+        }
+
+        // Action not specified on CLI; skip.
+        return true;
+    }
+
+    /**
      * Check if conditions apply
      *
      * @param  \CaptainHook\App\Config\Condition[] $conditions
@@ -413,7 +481,7 @@ abstract class Hook extends RepositoryAware
             }
 
             $this->io->write(
-                ['', 'Configuring Hook Plugin: <comment>' . $pluginClass . '</comment>'],
+                ['Configured Hook Plugin: <comment>' . $pluginClass . '</comment>'],
                 true,
                 IO::VERBOSE
             );
@@ -449,10 +517,17 @@ abstract class Hook extends RepositoryAware
      */
     private function executeHookPluginsFor(string $method, ?Config\Action $action = null): void
     {
+        /** @var IO\Base $io */
+        $io = $this->io;
+
+        if ($io->getOption('disable-plugins')) {
+            return;
+        }
+
         $plugins = $this->getHookPlugins();
 
         if (count($plugins) === 0) {
-            $this->io->write(['', 'No plugins to execute for: <comment>' . $method . '</comment>'], true, IO::DEBUG);
+            $io->write(['', 'No plugins to execute for: <comment>' . $method . '</comment>'], true, IO::DEBUG);
 
             return;
         }
@@ -463,10 +538,10 @@ abstract class Hook extends RepositoryAware
             $params[] = $action;
         }
 
-        $this->io->write(['', 'Executing plugins for: <comment>' . $method . '</comment>'], true, IO::DEBUG);
+        $io->write(['', 'Executing plugins for: <comment>' . $method . '</comment>'], true, IO::DEBUG);
 
         foreach ($plugins as $plugin) {
-            $this->io->write('<info>- Running ' . get_class($plugin) . '::' . $method . '</info>', true, IO::DEBUG);
+            $io->write(' <info>- Running ' . get_class($plugin) . '::' . $method . '</info>', true, IO::DEBUG);
             $plugin->{$method}(...$params);
         }
     }

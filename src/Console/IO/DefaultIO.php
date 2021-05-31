@@ -104,6 +104,28 @@ class DefaultIO extends Base
     }
 
     /**
+     * Return the original cli options
+     *
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return $this->input->getOptions();
+    }
+
+    /**
+     * Return the original cli option or a given default
+     *
+     * @param string $name
+     * @param string|string[]|bool|null $default
+     * @return string|string[]|bool|null
+     */
+    public function getOption(string $name, $default = null)
+    {
+        return $this->getOptions()[$name] ?? $default;
+    }
+
+    /**
      * Return the piped in standard input
      *
      * @return string[]

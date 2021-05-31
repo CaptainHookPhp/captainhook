@@ -46,6 +46,28 @@ abstract class Base implements IO
     }
 
     /**
+     * Return the original cli options
+     *
+     * @return array
+     */
+    public function getOptions(): array
+    {
+        return [];
+    }
+
+    /**
+     * Return the original cli option or a given default
+     *
+     * @param string $name
+     * @param string|string[]|bool|null $default
+     * @return string|string[]|bool|null
+     */
+    public function getOption(string $name, $default = null)
+    {
+        return $default;
+    }
+
+    /**
      * Return the piped in standard input
      *
      * @return string[]

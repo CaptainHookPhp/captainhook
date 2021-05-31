@@ -82,12 +82,18 @@ class PreCommitTest extends TestCase
         // so even if the first actions fails this action has to get executed
         $actionConfigSuccess->expects($this->atLeastOnce())
                             ->method('getAction')
-                            ->willReturn(CH_PATH_FILES . '/bin/failure');
+                            ->willReturn(CH_PATH_FILES . '/bin/success');
+
+        $actionConfigWithReallyLongName = $this->createActionConfigMock();
+        $actionConfigWithReallyLongName
+            ->expects($this->atLeastOnce())
+            ->method('getAction')
+            ->willReturn(CH_PATH_FILES . '/bin/success --really-long-option-name-to-ensure-this-is-over-65-characters');
 
         $hookConfig->expects($this->atLeast(1))->method('isEnabled')->willReturn(true);
         $hookConfig->expects($this->once())
                    ->method('getActions')
-                   ->willReturn([$actionConfigFail, $actionConfigSuccess]);
+                   ->willReturn([$actionConfigFail, $actionConfigSuccess, $actionConfigWithReallyLongName]);
 
         $config->expects($this->once())->method('getHookConfig')->willReturn($hookConfig);
         $io->expects($this->atLeast(1))->method('write');

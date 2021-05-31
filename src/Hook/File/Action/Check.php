@@ -92,6 +92,7 @@ abstract class Check implements Action, Constrained
      * Setup the action, reading and validating all config settings
      *
      * @param \CaptainHook\App\Config\Options $options
+     * @codeCoverageIgnore
      */
     protected function setUp(Config\Options $options): void
     {

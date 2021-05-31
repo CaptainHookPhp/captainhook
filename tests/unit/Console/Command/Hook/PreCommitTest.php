@@ -11,12 +11,14 @@
 
 namespace CaptainHook\App\Console\Command\Hook;
 
+use CaptainHook\App\Console\Command;
 use CaptainHook\App\Console\Runtime\Resolver;
 use CaptainHook\App\Git\DummyRepo;
 use Exception;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\NullOutput;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Console\Output\Output;
 
 class PreCommitTest extends TestCase
 {
@@ -149,5 +151,64 @@ class PreCommitTest extends TestCase
 
         $cmd = new PreCommit($resolver);
         $this->assertEquals(1, $cmd->run($input, $output));
+    }
+
+    public function testListActionsPrintsActions(): void
+    {
+        $output = $this->getMockBuilder(Output::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $output
+            ->expects($this->exactly(3))
+            ->method('writeln')
+            ->withConsecutive(
+                ['<comment>Listing pre-commit actions:</comment>'],
+                [' - <fg=blue>phpcs --standard=psr2 src</>'],
+                [' - <fg=blue>phpunit --configuration=build/phpunit-hook.xml</>']
+            );
+
+        $repo   = new DummyRepo();
+        $input  = new ArrayInput(
+            [
+                '--configuration' => CH_PATH_FILES . '/config/valid-with-includes.json',
+                '--git-directory' => $repo->getGitDir(),
+                '--list-actions'  => true,
+            ]
+        );
+
+        $cmd = new PreCommit(new Resolver());
+        $cmd->run($input, $output);
+
+        $this->assertTrue(true);
+    }
+
+    public function testListActionsForDisabledHook(): void
+    {
+        $output = $this->getMockBuilder(Output::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+
+        $output
+            ->expects($this->exactly(2))
+            ->method('writeln')
+            ->withConsecutive(
+                ['<comment>Listing pre-commit actions:</comment>'],
+                [' - hook is disabled']
+            );
+
+        $repo   = new DummyRepo();
+        $input  = new ArrayInput(
+            [
+                '--configuration' => CH_PATH_FILES . '/config/valid-with-all-disabled-hooks.json',
+                '--git-directory' => $repo->getGitDir(),
+                '--list-actions'  => true,
+            ]
+        );
+
+        $cmd = new PreCommit(new Resolver());
+        $cmd->run($input, $output);
+
+        $this->assertTrue(true);
     }
 }

@@ -104,6 +104,36 @@ class DefaultIOTest extends TestCase
         $this->assertEquals('bar', $io->getArgument('fiz', 'bar'));
     }
 
+    /**
+     * Tests DefaultIO::getOptions
+     */
+    public function testGetOptions(): void
+    {
+        $input  = $this->getInputMock();
+        $output = $this->getOutputMock();
+        $helper = $this->getHelperSetMock();
+
+        $input->expects($this->once())->method('getOptions')->willReturn(['foo' => 'bar']);
+        $io = new DefaultIO($this->fakeStdIn(), $input, $output, $helper);
+
+        $this->assertEquals(['foo' => 'bar'], $io->getOptions());
+    }
+
+    /**
+     * Tests DefaultIO::getOption
+     */
+    public function testGetOption(): void
+    {
+        $input  = $this->getInputMock();
+        $output = $this->getOutputMock();
+        $helper = $this->getHelperSetMock();
+
+        $input->expects($this->exactly(2))->method('getOptions')->willReturn(['foo' => 'bar']);
+        $io = new DefaultIO($this->fakeStdIn(), $input, $output, $helper);
+
+        $this->assertEquals('bar', $io->getOption('foo'));
+        $this->assertEquals('bar', $io->getOption('fiz', 'bar'));
+    }
 
     /**
      * Tests DefaultIO::getStandardInput

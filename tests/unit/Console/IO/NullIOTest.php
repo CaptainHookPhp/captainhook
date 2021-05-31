@@ -35,6 +35,25 @@ class NullIOTest extends TestCase
     }
 
     /**
+     * Tests NullIO::getOptions
+     */
+    public function testGetOptions(): void
+    {
+        $io = new NullIO();
+        $this->assertEquals([], $io->getOptions());
+    }
+
+    /**
+     * Tests NullIO::getOption
+     */
+    public function testGetOption(): void
+    {
+        $io = new NullIO();
+        $this->assertEquals('', $io->getOption('foo'));
+        $this->assertEquals('bar', $io->getOption('foo', 'bar'));
+    }
+
+    /**
      * Tests NullIO::getStandardInput
      */
     public function testGetStandardInput(): void
